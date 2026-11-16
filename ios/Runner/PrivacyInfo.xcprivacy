@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<privacy>
+  <accessed-api-types>
+    <accessed-api-type usage="required">
+      <api>NSPrivacyAccessedAPINetwork</api>
+      <reason>Networking is required to communicate with the Digitize Nexus backend.</reason>
+    </accessed-api-type>
+  </accessed-api-types>
+
+  <collected-data-types>
+    <collected-data-type tracking="false">
+      <data>NSPrivacyCollectedDataTypeDeviceID</data>
+      <purpose>Used for secure communication with the home energy system.</purpose>
+    </collected-data-type>
+  </collected-data-types>
+
+  <tracking>
+    <tracking-enabled>false</tracking-enabled>
+  </tracking>
+</privacy>
