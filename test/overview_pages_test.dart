@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexus_app/core/models/daily_energy.dart';
-import 'package:nexus_app/core/models/nexus_energy_state.dart';
 import 'package:nexus_app/core/providers/energy_provider.dart';
-import 'package:nexus_app/core/repositories/energy_repository.dart';
 import 'package:nexus_app/features/energy/energy_overview_page.dart';
 import 'package:nexus_app/features/energy/heating_overview_page.dart';
 import 'package:nexus_app/features/home/nexus_home.dart';
@@ -15,45 +12,10 @@ import 'package:nexus_app/features/settings/alarm_settings_page.dart';
 import 'package:nexus_app/features/vehicle/screens/ev_overview.dart';
 import 'package:nexus_app/theme/nexus_theme.dart';
 import 'package:nexus_app/shared/overview_widgets.dart';
-
-class OverviewRepository extends NexusEnergyRepository {
-  int pauses = 0;
-  bool failPause = false;
-  OverviewRepository() : super(baseUrl: '');
-  @override
-  Future<NexusEnergyState> fetchEnergyState() async =>
-      NexusEnergyState.fromJson({
-        'solarKw': 3.8,
-        'solarDayKwh': 7.8,
-        'batterySoc': 64,
-        'batteryKw': -1.2,
-        'evSoc': 72,
-        'evKw': 2.4,
-        'evDayKwh': 5.2,
-      });
-  @override
-  Future<DailyEnergy> fetchDailyTotals() async => DailyEnergy.fromJson({
-        'date': '2026-11-17',
-        'grid_kwh': 1,
-        'home_kwh': 2,
-        'solar_kwh': 3,
-        'battery_kwh': 4,
-        'ev_kwh': 5,
-      });
-  @override
-  Future<void> pauseCharging() async {
-    pauses++;
-    if (failPause) throw Exception('Charger unavailable');
-  }
-}
-
-class SummaryRepository extends OverviewRepository {
-  final Map<String, dynamic> sample;
-  SummaryRepository(this.sample);
-  @override
-  Future<NexusEnergyState> fetchEnergyState() async =>
-      NexusEnergyState.fromJson(sample);
-}
+import 'package:nexus_app/features/water/water_page.dart';
+import 'package:nexus_app/features/water/water_controller.dart';
+import 'support/energy_fakes.dart';
+import 'support/water_fakes.dart';
 
 Widget harness(Widget page,
         {TargetPlatform platform = TargetPlatform.android,
@@ -61,7 +23,8 @@ Widget harness(Widget page,
     ProviderScope(
         overrides: [
           energyRepositoryProvider
-              .overrideWithValue(repository ?? OverviewRepository())
+              .overrideWithValue(repository ?? OverviewRepository()),
+          waterServiceProvider.overrideWithValue(FakeWaterService())
         ],
         child: MaterialApp(
           theme: nexusTheme.copyWith(platform: platform),
@@ -72,6 +35,7 @@ Widget harness(Widget page,
             '/solar': (_) => const EnergyOverviewPage(),
             '/battery': (_) => const EnergyOverviewPage(battery: true),
             '/heating': (_) => const HeatingOverviewPage(),
+            '/water': (_) => const WaterPage(),
             '/security': (_) => const SecurityOverview()
           },
         ));
@@ -95,6 +59,7 @@ void main() {
         const EnergyOverviewPage(),
         const EnergyOverviewPage(battery: true),
         const HeatingOverviewPage(),
+        const WaterPage(),
       ]) {
         await tester.pumpWidget(harness(page, platform: spec.platform));
         await tester.pump(const Duration(milliseconds: 100));

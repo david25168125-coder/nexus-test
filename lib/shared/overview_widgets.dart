@@ -105,3 +105,52 @@ class FutureFeature extends StatelessWidget {
         Text(description),
       ]));
 }
+
+/// Uses available desktop space without squeezing compact touchscreens.
+class OverviewColumns extends StatelessWidget {
+  final Widget primary;
+  final Widget secondary;
+  final int primaryFlex;
+  final int secondaryFlex;
+  const OverviewColumns(
+      {super.key,
+      required this.primary,
+      required this.secondary,
+      this.primaryFlex = 1,
+      this.secondaryFlex = 1});
+  @override
+  Widget build(BuildContext context) =>
+      LayoutBuilder(builder: (context, constraints) {
+        if (constraints.maxWidth < 900) {
+          return Column(
+              children: [primary, const SizedBox(height: 24), secondary]);
+        }
+        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(flex: primaryFlex, child: primary),
+          const SizedBox(width: 24),
+          Expanded(flex: secondaryFlex, child: secondary),
+        ]);
+      });
+}
+
+class StatusBadge extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  const StatusBadge(this.label,
+      {super.key, required this.icon, this.color = const Color(0xFF81CBBE)});
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: color.withOpacity(0.25))),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Flexible(
+              child: Text(label, style: TextStyle(fontSize: 12, color: color))),
+        ]),
+      );
+}

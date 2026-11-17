@@ -8,6 +8,7 @@ class NexusHeader extends StatelessWidget {
   final String? title;
   final bool showBrand;
   final bool backNavigation;
+  final VoidCallback? onDashboard;
 
   /// Kiosk installations can force left alignment even on a desktop host.
   /// Otherwise only spacious desktop layouts centre the brand.
@@ -21,6 +22,7 @@ class NexusHeader extends StatelessWidget {
     this.title,
     this.showBrand = true,
     this.backNavigation = false,
+    this.onDashboard,
     this.centerBrand,
   });
 
@@ -86,6 +88,12 @@ class NexusHeader extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (onDashboard != null)
+                  IconButton(
+                    tooltip: 'Dashboard',
+                    onPressed: onDashboard,
+                    icon: const Icon(Icons.home_outlined, size: 22),
+                  ),
                 if (showSettings)
                   IconButton(
                     tooltip: 'Settings',

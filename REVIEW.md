@@ -29,12 +29,24 @@ The energy model retains its legacy numeric defaults so the existing map is not 
 
 The existing supplied backend uses zero placeholders for some equipment. Most device communication flags in the supplied model are also defaults rather than verified device health. No whole-building health or physical alarm protection is inferred.
 
-The energy repository URL can be supplied with `--dart-define=NEXUS_API_URL=...`; other existing service URLs are unchanged. Forecasting, automatic battery optimisation, camera streaming, heating integrations and persistent settings are not implemented by this UI increment.
+The energy repository and water service URL can be supplied with `--dart-define=NEXUS_API_URL=...`; other existing service URLs are unchanged. Forecasting, automatic battery optimisation, camera streaming, heating integrations and persistent settings are not implemented by this UI increment.
 
 ## Verification
 
 - Active web application builds successfully.
-- 18 widget tests cover four viewport/platform combinations, all Settings destinations, alarm preview arm/disarm, retained alarm-name editing, EV failure feedback, desktop-only map scaling, navigation, all five node taps, and missing versus zero readings.
+- 26 widget tests cover four viewport/platform combinations, all Settings destinations, alarm preview arm/disarm, retained alarm-name editing, EV failure feedback, desktop-only map scaling, navigation, all five node taps, and missing versus zero readings.
 - Changed app paths have zero static-analysis errors. Existing unused-helper and style/SDK-deprecation notices remain; see `docs/overview-analysis.txt`.
 - Full-project analysis still identifies inherited errors in the older NexusData repository constructor, missing BaseRepository used by the old SecurityRepository, an outdated security navigation import, and the TapAnimation sample page. These inactive paths are documented rather than silently removed.
 - Browser previews use simulated energy readings, with external HTTPS requests blocked to check local fonts/renderer startup. No physical Home Assistant, alarm, charger or NSPanel Pro was tested.
+
+## V2 — unified navigation, Water and EV
+
+The shared overview shell now includes both Back and Dashboard. Dashboard replaces the route stack with the actual home page. Back returns to the preceding page and falls back to Dashboard if no previous page exists. These controls remain available while data is loading or offline, including on Water and Settings sub-pages. Desktop sidebar branding and compact touchscreen header branding continue to appear once per screen.
+
+Water now uses the same shell and dark panel system. It has a large period-based consumption summary, current flow, daily usage, a daily history chart, supply/lock status, leak detection, alerts, meter status and smart-meter expansion area. Old hard-coded daily/month/year amounts were removed. Consumption/history/leak data is optional and currently absent from the supplied Python API; the page explains absence without drawing made-up history or treating zero flow as proof of leak protection. `docs/water-data-contract.md` documents the optional fields.
+
+The existing WaterService endpoints for open, close, lock and unlock are retained. The controller now handles returned success/failure, rejects duplicate in-flight commands, respects valve locks, refreshes after commands and retains failed-refresh readings only as explicitly stale data with commands disabled. Water polls while its page is open and cancels its timer on exit. No optimistic valve state is inferred by the UI.
+
+EV now has a larger illustrated vehicle hero with battery and charging state immediately visible. Desktop space is used for paired charging/climate and schedule/location areas. Climate, range, vehicle state and location remain unavailable where there is no verified integration; no fake location or door status is displayed. Existing charging API actions and schedule entry remain unchanged.
+
+V2 verification adds Water to phone, NSPanel-sized, tablet and desktop layout tests. It tests all four valve actions, lock behaviour, rejection feedback, stale-state handling, data parsing, chart input, duplicate-command prevention, real application-route Dashboard access, Settings-sub-page exit and first-route Back fallback during loading. Web build passes; changed paths have no analysis errors. Browser previews block external HTTPS and use simulated API data. Physical devices and inherited analysis errors in inactive files remain unverified/unresolved as documented above.

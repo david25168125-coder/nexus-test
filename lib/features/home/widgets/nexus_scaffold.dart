@@ -22,6 +22,17 @@ class NexusScaffold extends StatefulWidget {
 
 class _NexusScaffoldState extends State<NexusScaffold> {
   bool systemsOpen = false;
+  void dashboard() =>
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+  void back() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      dashboard();
+    }
+  }
+
   @override
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
@@ -48,8 +59,9 @@ class _NexusScaffoldState extends State<NexusScaffold> {
                   title: widget.title,
                   showBrand: !desktop,
                   backNavigation: widget.useBackNavigation,
+                  onDashboard: widget.useBackNavigation ? dashboard : null,
                   onBack: widget.useBackNavigation
-                      ? () => Navigator.maybePop(context)
+                      ? back
                       : () => setState(() => systemsOpen = true),
                   showSettings: widget.showSettings,
                 ),
