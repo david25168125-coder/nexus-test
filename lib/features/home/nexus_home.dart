@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_app/core/providers/energy_provider.dart';
 
 import 'widgets/nexus_scaffold.dart';
+import 'package:nexus_app/shared/nexus_brand.dart';
 import 'widgets/nexus_energy_map.dart';
 
 class NexusHome extends ConsumerWidget {
@@ -16,22 +17,27 @@ class NexusHome extends ConsumerWidget {
     final greeting = hour < 12
         ? 'Good morning'
         : hour < 18
-        ? 'Good afternoon'
-        : 'Good evening';
+            ? 'Good afternoon'
+            : 'Good evening';
 
     return NexusScaffold(
       showSettings: true,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 900;
+          final desktop =
+              isLargeDesktop(context, MediaQuery.sizeOf(context).width);
+          final mapHeight = desktop
+              ? (constraints.maxHeight - 440).clamp(400.0, 720.0)
+              : (wide ? 480.0 : 400.0);
           return SingleChildScrollView(
             padding: EdgeInsets.symmetric(
-              horizontal: wide ? 56 : 24,
+              horizontal: desktop ? 32 : (wide ? 56 : 24),
               vertical: 24,
             ),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1280),
+                constraints: BoxConstraints(maxWidth: desktop ? 2000 : 1280),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -56,7 +62,7 @@ class NexusHome extends ConsumerWidget {
                     ),
                     const SizedBox(height: 28),
                     SizedBox(
-                      height: wide ? 480 : 400,
+                      height: mapHeight,
                       child: energy.when(
                         data: (data) => NexusEnergyMap(data: data),
                         loading: () =>
@@ -134,6 +140,11 @@ class NexusHome extends ConsumerWidget {
                           '/ev',
                         ),
                         _Control('Water', Icons.water_drop_outlined, '/water'),
+                        _Control('Solar', Icons.solar_power_outlined, '/solar'),
+                        _Control(
+                            'Battery', Icons.battery_full_outlined, '/battery'),
+                        _Control(
+                            'Heating', Icons.thermostat_outlined, '/heating'),
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -155,16 +166,16 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 210,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        const SizedBox(height: 8),
-        Text(value, style: Theme.of(context).textTheme.headlineMedium),
-      ],
-    ),
-  );
+        width: 210,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 8),
+            Text(value, style: Theme.of(context).textTheme.headlineMedium),
+          ],
+        ),
+      );
 }
 
 class _Control extends StatelessWidget {
@@ -175,8 +186,8 @@ class _Control extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(
-    onPressed: () => Navigator.pushNamed(context, route),
-    icon: Icon(icon, size: 20),
-    label: Text(label),
-  );
+        onPressed: () => Navigator.pushNamed(context, route),
+        icon: Icon(icon, size: 20),
+        label: Text(label),
+      );
 }

@@ -1,4 +1,7 @@
 class NexusEnergyState {
+  // Preserve legacy defaults while allowing new screens to distinguish missing
+  // readings from a genuine zero returned by Core.
+  final Set<String> reportedFields;
   // -----------------------------
   // EXISTING FIELDS
   // -----------------------------
@@ -56,7 +59,7 @@ class NexusEnergyState {
   // -----------------------------
   // NEW UI FIELDS (REQUIRED BY TESLA MAP)
   // -----------------------------
-  final double homeKw;          // alias for homeLoadKw
+  final double homeKw; // alias for homeLoadKw
   final bool solarComms;
   final bool batteryComms;
   final bool evComms;
@@ -69,6 +72,7 @@ class NexusEnergyState {
   final int homeCostBand;
 
   const NexusEnergyState({
+    this.reportedFields = const {},
     // Existing
     required this.solarKw,
     required this.gridKw,
@@ -127,6 +131,9 @@ class NexusEnergyState {
     final gridDay = (json['today_kwh'] ?? json['gridDayKwh'] ?? 0).toDouble();
 
     return NexusEnergyState(
+      reportedFields: Set.unmodifiable(json.entries
+          .where((entry) => entry.value != null)
+          .map((entry) => entry.key)),
       // Existing
       solarKw: (json['solarKw'] ?? 0).toDouble(),
       gridKw: (json['grid_kw'] ?? json['gridKw'] ?? 0).toDouble(),
@@ -137,7 +144,8 @@ class NexusEnergyState {
       batterySoc: (json['batterySoc'] ?? 0).toInt(),
       evEnergyAddedKwh: (json['evEnergyAddedKwh'] ?? 0).toDouble(),
       evSoc: (json['evSoc'] ?? 0).toInt(),
-      evTimeRemaining: Duration(minutes: (json['evTimeRemainingMinutes'] ?? 0).toInt()),
+      evTimeRemaining:
+          Duration(minutes: (json['evTimeRemainingMinutes'] ?? 0).toInt()),
 
       solarDayKwh: (json['solarDayKwh'] ?? 0).toDouble(),
       solarMonthKwh: (json['solarMonthKwh'] ?? 0).toDouble(),

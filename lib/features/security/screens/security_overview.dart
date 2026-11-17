@@ -1,210 +1,110 @@
 import 'package:flutter/material.dart';
-import 'package:nexus_app/features/home/widgets/nexus_scaffold.dart';
-import 'package:nexus_app/features/home/widgets/nexus_header.dart';
-import 'tesla_security_map.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nexus_app/shared/overview_widgets.dart';
+import '../security_controller.dart';
+import '../security_model.dart';
 
-enum AlarmState { unset, setting, set, unsetting }
-
-class SecurityOverview extends StatefulWidget {
+class SecurityOverview extends ConsumerWidget {
   const SecurityOverview({super.key});
-
   @override
-  State<SecurityOverview> createState() => _SecurityOverviewState();
-}
-
-class _SecurityOverviewState extends State<SecurityOverview>
-    with SingleTickerProviderStateMixin {
-  AlarmState state = AlarmState.unset;
-  int settingCountdown = 10;
-  late AnimationController lockPulse;
-
-  @override
-  void initState() {
-    super.initState();
-
-    lockPulse = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
-  }
-
-  void startSetting() {
-    setState(() => state = AlarmState.setting);
-    settingCountdown = 10;
-
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      if (settingCountdown > 0) {
-        setState(() => settingCountdown--);
-        return true;
-      }
-      setState(() => state = AlarmState.set);
-      return false;
-    });
-  }
-
-  Color get homeColor {
-    switch (state) {
-      case AlarmState.unset:
-        return Colors.green;
-      case AlarmState.setting:
-        return Colors.orange;
-      case AlarmState.set:
-        return Colors.red;
-      case AlarmState.unsetting:
-        return Colors.orange;
-    }
-  }
-
-  IconData get lockIcon {
-    switch (state) {
-      case AlarmState.unset:
-        return Icons.lock_open;
-      case AlarmState.setting:
-        return Icons.lock_clock;
-      case AlarmState.set:
-        return Icons.lock;
-      case AlarmState.unsetting:
-        return Icons.lock_open;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return NexusScaffold(
-      isMainPage: false,
-      showSettings: true,
-
-      child: SafeArea(
-        child: Column(
-          children: [
-            // HEADER (same as EV)
-            NexusHeader(
-              isMainPage: false,
-              onBack: () {
-                Navigator.popUntil(context, ModalRoute.withName('/'));
-              },
-              title: "Security Overview",
-              showSettings: true,
-            ),
-
-            const SizedBox(height: 20),
-
-            // MAIN SECURITY NODE
-            TeslaNode(
-              radius: 70,
-              color: homeColor,
-              active: true,
-              alert: false,
-              badge: false,
-              icon: lockIcon,
-              label: state == AlarmState.setting
-                  ? "Setting (${settingCountdown})"
-                  : state == AlarmState.set
-                      ? "SET"
-                      : "UNSET",
-              onTap: () {
-                if (state == AlarmState.unset) startSetting();
-                if (state == AlarmState.set) {
-                  setState(() => state = AlarmState.unsetting);
-                }
-              },
-            ),
-
-            const SizedBox(height: 40),
-
-            // GROUP ROW
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TeslaNode(
-                  radius: 40,
-                  color: Colors.blue,
-                  active: false,
-                  alert: false,
-                  badge: false,
-                  icon: Icons.shield,
-                  label: "A1",
-                  onTap: () {},
-                ),
-                const SizedBox(width: 40),
-                TeslaNode(
-                  radius: 40,
-                  color: Colors.blue,
-                  active: false,
-                  alert: false,
-                  badge: false,
-                  icon: Icons.shield,
-                  label: "A2",
-                  onTap: () {},
-                ),
-                const SizedBox(width: 40),
-                TeslaNode(
-                  radius: 40,
-                  color: Colors.blue,
-                  active: false,
-                  alert: false,
-                  badge: false,
-                  icon: Icons.shield,
-                  label: "A3",
-                  onTap: () {},
-                ),
-              ],
-            ),
-
-            const Spacer(),
-
-            // BOTTOM NAVIGATION
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                TeslaNode(
-                  radius: 40,
-                  color: Colors.white,
-                  active: true,
-                  alert: false,
-                  badge: false,
-                  icon: Icons.security,
-                  label: "Security",
-                  onTap: () {},
-                ),
-                TeslaNode(
-                  radius: 40,
-                  color: Colors.red,
-                  active: false,
-                  alert: false,
-                  badge: true,
-                  icon: Icons.notifications,
-                  label: "Notifications",
-                  onTap: () {},
-                ),
-                TeslaNode(
-                  radius: 40,
-                  color: Colors.red,
-                  active: false,
-                  alert: false,
-                  badge: true,
-                  icon: Icons.sensors,
-                  label: "Zones",
-                  onTap: () {},
-                ),
-                TeslaNode(
-                  radius: 40,
-                  color: Colors.blue,
-                  active: false,
-                  alert: false,
-                  badge: false,
-                  icon: Icons.power,
-                  label: "Outputs",
-                  onTap: () {},
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final alarm = ref.watch(securityControllerProvider);
+    final controller = ref.read(securityControllerProvider.notifier);
+    final pending = alarm.pendingSet || alarm.pendingUnset;
+    final status = switch (alarm.state) {
+      AlarmState.unset => 'Disarmed',
+      AlarmState.setting => 'Arming…',
+      AlarmState.set => 'Armed',
+      AlarmState.unsetting => 'Disarming…',
+      AlarmState.fault => 'Needs attention',
+    };
+    return OverviewPage(
+        title: 'Security',
+        subtitle: 'Your alarm, doors and motion sensors in one place.',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          OverviewPanel(
+              title: alarm.alarmName,
+              icon: Icons.shield_outlined,
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('PREVIEW MODE · NO PHYSICAL ALARM CONNECTION',
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFF88ACDC))),
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      Icon(
+                          alarm.state == AlarmState.set
+                              ? Icons.lock_outline
+                              : Icons.lock_open_outlined,
+                          size: 56,
+                          color: const Color(0xFF81CBBE)),
+                      const SizedBox(width: 20),
+                      Expanded(
+                          child: Text(status,
+                              style:
+                                  Theme.of(context).textTheme.headlineLarge)),
+                    ]),
+                    const SizedBox(height: 16),
+                    const Text(
+                        'These controls preview the existing alarm behaviour. They do not secure or disarm your property.'),
+                    const SizedBox(height: 24),
+                    Wrap(spacing: 12, runSpacing: 12, children: [
+                      FilledButton.icon(
+                          onPressed: pending || alarm.state == AlarmState.set
+                              ? null
+                              : controller.arm,
+                          icon: const Icon(Icons.lock_outline),
+                          label: const Text('Preview arm')),
+                      OutlinedButton.icon(
+                          onPressed: pending || alarm.state == AlarmState.unset
+                              ? null
+                              : controller.disarm,
+                          icon: const Icon(Icons.lock_open_outlined),
+                          label: const Text('Preview disarm')),
+                    ]),
+                  ])),
+          const SizedBox(height: 24),
+          OverviewPanel(
+              title: 'Doors & motion · preview zones',
+              icon: Icons.sensors,
+              child: Column(
+                  children: alarm.zones.map((zone) {
+                final motion = zone.name.toLowerCase().contains('pir');
+                final state = zone.tamper
+                    ? 'Tamper'
+                    : zone.fault
+                        ? 'Fault'
+                        : zone.bypassed
+                            ? 'Bypassed'
+                            : zone.open
+                                ? (motion ? 'Motion' : 'Open')
+                                : (motion ? 'Clear' : 'Closed');
+                return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(motion
+                        ? Icons.sensors
+                        : Icons.door_front_door_outlined),
+                    title: Text(zone.name),
+                    subtitle: Text('Zone ${zone.id} · preview data'),
+                    trailing: Text(state,
+                        style: TextStyle(
+                            color: zone.open || zone.fault || zone.tamper
+                                ? const Color(0xFFFFBB80)
+                                : const Color(0xFF81CBBE))));
+              }).toList())),
+          const SizedBox(height: 24),
+          const FutureFeature(
+              title: 'Cameras',
+              icon: Icons.videocam_outlined,
+              description:
+                  'No cameras are connected. Local camera thumbnails and full-screen viewing will appear here when configured.'),
+          const SizedBox(height: 24),
+          const FutureFeature(
+              title: 'Activity & outputs',
+              icon: Icons.history,
+              description:
+                  'Alarm events, notifications and connected output controls will appear when the security integration is connected.'),
+        ]));
   }
 }

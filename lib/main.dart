@@ -9,7 +9,8 @@ import 'package:nexus_app/features/vehicle/screens/ev_overview.dart';
 
 // WATER SYSTEM
 import 'package:nexus_app/features/water/water_controller.dart';
-import 'package:nexus_app/features/water/water_service.dart';
+import 'package:nexus_app/features/energy/energy_overview_page.dart';
+import 'package:nexus_app/features/energy/heating_overview_page.dart';
 import 'package:nexus_app/features/water/water_page.dart';
 
 // SECURITY SYSTEM
@@ -38,9 +39,7 @@ class NexusApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: nexusTheme,
       home: NexusHome(),
-
       routes: {
-
         // NEW EV UI (your new EV dashboard)
         '/ev': (context) => EVOverview(),
 
@@ -52,6 +51,9 @@ class NexusApp extends ConsumerWidget {
 
         // SETTINGS
         '/settings': (context) => SettingsPage(),
+        '/solar': (context) => const EnergyOverviewPage(),
+        '/battery': (context) => const EnergyOverviewPage(battery: true),
+        '/heating': (context) => const HeatingOverviewPage(),
       },
     );
   }

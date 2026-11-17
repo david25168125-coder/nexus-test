@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:nexus_app/shared/nexus_brand.dart';
+import 'energy_map_geometry.dart';
 import 'package:nexus_app/features/home/widgets/tesla_energy_map.dart';
 import 'package:nexus_app/core/models/nexus_energy_state.dart';
 
@@ -39,25 +41,28 @@ class NexusEnergyMap extends StatelessWidget {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
 
-        // Same positions as your painter
-        final centerX = w / 2;
-        final centerY = h / 2;
-
         final landscape =
             MediaQuery.orientationOf(context) == Orientation.landscape;
-        final verticalOffset = h * (landscape ? 0.22 : 0.28);
-        final horizontalOffset = w * (landscape ? 0.32 : 0.28);
-
-        final solarPos = Offset(centerX, centerY - verticalOffset);
-        final batteryPos = Offset(centerX, centerY + verticalOffset);
-        final gridPos = Offset(centerX - horizontalOffset, centerY);
-        final evPos = Offset(centerX + horizontalOffset, centerY);
-        final homePos = Offset(centerX, centerY);
+        final desktop =
+            isLargeDesktop(context, MediaQuery.sizeOf(context).width);
+        final nodeScale = desktop
+            ? (w / 850).clamp(1.0, 1.6).clamp(1.0, (h / 320).clamp(1.0, 1.6))
+            : 1.0;
+        final geometry = EnergyMapGeometry(
+            size: Size(w, h), landscape: landscape, nodeScale: nodeScale);
+        final solarPos = geometry.solar;
+        final batteryPos = geometry.battery;
+        final gridPos = geometry.grid;
+        final evPos = geometry.ev;
+        final homePos = geometry.center;
+        final smallTarget = geometry.smallRadius.clamp(40.0, 80.0);
+        final homeTarget = geometry.homeRadius.clamp(60.0, 100.0);
 
         return Stack(
           children: [
             ClipRect(
               child: TeslaEnergyMap(
+                nodeScale: nodeScale,
                 solarKw: data.solarKw,
                 batteryKw: data.batteryKw,
                 liveGridKw: data.gridKw,
@@ -88,8 +93,8 @@ class NexusEnergyMap extends StatelessWidget {
 
             // Solar
             Positioned(
-              left: solarPos.dx - 40,
-              top: solarPos.dy - 40,
+              left: solarPos.dx - smallTarget,
+              top: solarPos.dy - smallTarget,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => _showReading(
@@ -98,26 +103,28 @@ class NexusEnergyMap extends StatelessWidget {
                   data.solarKw,
                   data.solarDayKwh,
                 ),
-                child: const SizedBox(width: 80, height: 80),
+                child:
+                    SizedBox(width: smallTarget * 2, height: smallTarget * 2),
               ),
             ),
 
             // Grid
             Positioned(
-              left: gridPos.dx - 40,
-              top: gridPos.dy - 40,
+              left: gridPos.dx - smallTarget,
+              top: gridPos.dy - smallTarget,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () =>
                     _showReading(context, 'Grid', data.gridKw, data.gridDayKwh),
-                child: const SizedBox(width: 80, height: 80),
+                child:
+                    SizedBox(width: smallTarget * 2, height: smallTarget * 2),
               ),
             ),
 
             // EV
             Positioned(
-              left: evPos.dx - 40,
-              top: evPos.dy - 40,
+              left: evPos.dx - smallTarget,
+              top: evPos.dy - smallTarget,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => _showReading(
@@ -126,14 +133,15 @@ class NexusEnergyMap extends StatelessWidget {
                   data.evKw,
                   data.evDayKwh,
                 ),
-                child: const SizedBox(width: 80, height: 80),
+                child:
+                    SizedBox(width: smallTarget * 2, height: smallTarget * 2),
               ),
             ),
 
             // Battery
             Positioned(
-              left: batteryPos.dx - 40,
-              top: batteryPos.dy - 40,
+              left: batteryPos.dx - smallTarget,
+              top: batteryPos.dy - smallTarget,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => _showReading(
@@ -142,19 +150,20 @@ class NexusEnergyMap extends StatelessWidget {
                   data.batteryKw,
                   data.batteryDayKwh,
                 ),
-                child: const SizedBox(width: 80, height: 80),
+                child:
+                    SizedBox(width: smallTarget * 2, height: smallTarget * 2),
               ),
             ),
 
             // Home (larger)
             Positioned(
-              left: homePos.dx - 60,
-              top: homePos.dy - 60,
+              left: homePos.dx - homeTarget,
+              top: homePos.dy - homeTarget,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () =>
                     _showReading(context, 'Home', data.homeKw, data.homeDayKwh),
-                child: const SizedBox(width: 120, height: 120),
+                child: SizedBox(width: homeTarget * 2, height: homeTarget * 2),
               ),
             ),
           ],

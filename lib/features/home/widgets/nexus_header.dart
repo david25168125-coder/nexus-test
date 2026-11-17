@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:nexus_app/shared/nexus_brand.dart';
 
 class NexusHeader extends StatelessWidget {
   final bool isMainPage;
   final VoidCallback? onBack;
   final bool showSettings;
   final String? title;
+  final bool showBrand;
+  final bool backNavigation;
 
   /// Kiosk installations can force left alignment even on a desktop host.
   /// Otherwise only spacious desktop layouts centre the brand.
@@ -16,14 +19,15 @@ class NexusHeader extends StatelessWidget {
     this.onBack,
     this.showSettings = true,
     this.title,
+    this.showBrand = true,
+    this.backNavigation = false,
     this.centerBrand,
   });
 
   @override
   Widget build(BuildContext context) {
     final platform = Theme.of(context).platform;
-    final desktop =
-        platform == TargetPlatform.linux ||
+    final desktop = platform == TargetPlatform.linux ||
         platform == TargetPlatform.macOS ||
         platform == TargetPlatform.windows;
 
@@ -31,8 +35,7 @@ class NexusHeader extends StatelessWidget {
       bottom: false,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final centered =
-              centerBrand ??
+          final centered = centerBrand ??
               (desktop &&
                   constraints.maxWidth >= 1100 &&
                   MediaQuery.sizeOf(context).shortestSide >= 900);
@@ -45,29 +48,28 @@ class NexusHeader extends StatelessWidget {
               children: [
                 if (!isMainPage)
                   IconButton(
-                    tooltip: 'Home systems',
+                    tooltip: backNavigation ? 'Back' : 'Home systems',
                     onPressed: onBack,
-                    icon: const Icon(Icons.grid_view_rounded, size: 22),
+                    icon: Icon(
+                        backNavigation
+                            ? Icons.arrow_back_rounded
+                            : Icons.grid_view_rounded,
+                        size: 22),
                   )
                 else if (centered)
                   const SizedBox(width: 48),
                 Expanded(
                   child: Align(
-                    alignment: centered
-                        ? Alignment.center
-                        : Alignment.centerLeft,
+                    alignment:
+                        centered ? Alignment.center : Alignment.centerLeft,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Image.asset(
-                            'assets/digitize_nexus_logo.png',
-                            width: 36,
-                            height: 36,
-                            semanticLabel: 'Nexus',
+                        if (showBrand)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: NexusBrand(),
                           ),
-                        ),
                         if (title != null)
                           Flexible(
                             child: Text(

@@ -1,248 +1,232 @@
 import 'package:flutter/material.dart';
-import 'package:nexus_app/features/home/widgets/nexus_header.dart';
-import 'package:nexus_app/features/home/widgets/nexus_footer.dart';
-import '../widgets/soc_ring.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nexus_app/core/providers/energy_provider.dart';
+import 'package:nexus_app/core/repositories/energy_repository.dart';
+import 'package:nexus_app/shared/overview_widgets.dart';
 
-class EVOverview extends StatelessWidget {
+class EVOverview extends ConsumerStatefulWidget {
   const EVOverview({super.key});
+  @override
+  ConsumerState<EVOverview> createState() => _EVOverviewState();
+}
 
-  bool _isLandscape(BuildContext context) =>
-      MediaQuery.of(context).orientation == Orientation.landscape;
+class _EVOverviewState extends ConsumerState<EVOverview> {
+  bool busy = false;
+
+  Future<void> request(
+      String label, Future<void> Function(NexusEnergyRepository) action) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await action(ref.read(energyRepositoryProvider))
+          .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '$label request accepted by Core. Check the charger for confirmation.')));
+      ref.read(energyProvider.notifier).refresh();
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'The charger request could not be completed. Check your local connection and charger setup.')));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> schedule() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+        context: context,
+        initialDate: now,
+        firstDate: DateTime(now.year, now.month, now.day),
+        lastDate: now.add(const Duration(days: 365)));
+    if (date == null || !mounted) return;
+    final from = await showTimePicker(
+        context: context,
+        helpText: 'Charging starts',
+        initialTime: const TimeOfDay(hour: 0, minute: 30));
+    if (from == null || !mounted) return;
+    final to = await showTimePicker(
+        context: context,
+        helpText: 'Charging ends',
+        initialTime: const TimeOfDay(hour: 4, minute: 30));
+    if (to == null || !mounted) return;
+    final start =
+        DateTime(date.year, date.month, date.day, from.hour, from.minute);
+    var end = DateTime(date.year, date.month, date.day, to.hour, to.minute);
+    if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
+    if (!start.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Choose a charging start time in the future.')));
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Charging schedule'),
+              content: Text(
+                  'Start: $start\nEnd: $end\n\nTimes use this device’s local time. Core must support charging schedules.'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Send schedule'))
+              ],
+            ));
+    if (confirmed == true && mounted)
+      await request('Schedule', (repo) => repo.startSchedule(start, end));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final landscape = _isLandscape(context);
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Column(
-        children: [
-          // PREMIUM HEADER
-          NexusHeader(
-            isMainPage: false,
-            onBack: () => Navigator.pop(context),
-            title: "EV Overview",
-            showSettings: true,
-          ),
-
-          // MAIN CONTENT
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+    final energy = ref.watch(energyProvider);
+    final data = energy.asData?.value;
+    final enabled = data != null && !busy;
+    bool has(String field) => data?.reportedFields.contains(field) == true;
+    final battery = data != null && has('evSoc') ? '${data.evSoc} %' : '— %';
+    final readings = Wrap(spacing: 32, runSpacing: 24, children: [
+      Reading('Vehicle battery', battery,
+          detail: 'Awaiting verified vehicle integration'),
+      const Reading('Estimated range', '— miles',
+          detail: 'Range data not connected'),
+      Reading(
+          'Charging power',
+          data == null || !(has('evKw') || has('ev_kw'))
+              ? '— kW'
+              : '${data.evKw.toStringAsFixed(2)} kW',
+          detail: 'Reported by Nexus Core'),
+      Reading(
+          'Charge status',
+          data == null || !(has('evKw') || has('ev_kw'))
+              ? 'Unavailable'
+              : data.evKw > 0.05
+                  ? 'Charging'
+                  : 'Not charging',
+          detail: 'Core reading · verify charger setup'),
+    ]);
+    return OverviewPage(
+        title: 'EV charging',
+        subtitle: 'Your vehicle, ready for the next journey.',
+        child: Column(children: [
+          OverviewPanel(
+              title: 'Your vehicle',
+              icon: Icons.directions_car_outlined,
+              child: LayoutBuilder(builder: (context, bounds) {
+                final vehicle = Column(children: [
+                  Image.asset('assets/systems/EV.jpg',
+                      height: 190,
+                      fit: BoxFit.contain,
+                      semanticLabel: 'Vehicle illustration'),
+                  const Text('Vehicle illustration',
+                      style: TextStyle(fontSize: 12, color: Colors.white38)),
+                ]);
+                return bounds.maxWidth >= 800
+                    ? Row(children: [
+                        Expanded(child: vehicle),
+                        const SizedBox(width: 32),
+                        Expanded(child: readings),
+                      ])
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                            vehicle,
+                            const SizedBox(height: 24),
+                            readings
+                          ]);
+              })),
+          const SizedBox(height: 24),
+          OverviewPanel(
+              title: 'Charging session',
+              icon: Icons.bolt_outlined,
+              child: Wrap(spacing: 32, runSpacing: 24, children: [
+                Reading(
+                    'Energy added',
+                    data == null || !has('evEnergyAddedKwh')
+                        ? '— kWh'
+                        : '${data.evEnergyAddedKwh.toStringAsFixed(1)} kWh'),
+                Reading(
+                    'Charging today',
+                    data == null || !has('evDayKwh')
+                        ? '— kWh'
+                        : '${data.evDayKwh.toStringAsFixed(1)} kWh'),
+                Reading(
+                    'Time remaining',
+                    data != null && data.evTimeRemaining.inMinutes > 0
+                        ? '${data.evTimeRemaining.inMinutes} min'
+                        : 'Unavailable'),
+              ])),
+          const SizedBox(height: 24),
+          OverviewPanel(
+              title: 'Charging controls',
+              icon: Icons.ev_station_outlined,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 10),
-
-                  // HERO SECTION
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Stack(
-                      children: [
-                        Column(
-                          children: [
-                            const Text(
-                              "MG IM5",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            // CAR IMAGE (same size logic)
-                            Image.asset(
-                              'assets/systems/EV.jpg',
-                              height: landscape ? 150 : 200,
-                              fit: BoxFit.contain,
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            SOCRing(
-                              percentage: 72,
-                              size: landscape ? 120 : 160,
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            Text(
-                              "Estimated Range: 182 miles",
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: landscape ? 14 : 16,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // MG LOGO TOP RIGHT
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: () {
-                              // future: open vehicle selector
-                            },
-                            onLongPress: () {
-                              debugPrint("Hold detected: open vehicle selector");
-                            },
-                            child: Image.asset(
-                              'assets/systems/mg_logo.png',
-                              height: 40,
-                              width: 40,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // STATUS GRID
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 20,
-                    crossAxisSpacing: 20,
-                    childAspectRatio: landscape ? 2.2 : 1.4,
-                    children: const [
-                      _StatusCard(
-                        title: "Pre‑Drive",
-                        value: "Comfort",
-                        icon: Icons.settings_suggest,
-                      ),
-                      _StatusCard(
-                        title: "Doors",
-                        value: "Locked",
-                        icon: Icons.lock,
-                      ),
-                      _StatusCard(
-                        title: "Status",
-                        value: "Normal",
-                        icon: Icons.check_circle,
-                      ),
-                      _StatusCard(
-                        title: "Odometer",
-                        value: "7,540 km",
-                        icon: Icons.speed,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // QUICK ACTION ROW
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: const [
-                      _QuickAction(icon: Icons.description, label: "Docs"),
-                      _QuickAction(icon: Icons.ac_unit, label: "HVAC"),
-                      _QuickAction(icon: Icons.alarm, label: "Alarm"),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
-          ),
-
-          // FOOTER
-          const NexusFooter(),
-        ],
-      ),
-    );
-  }
-}
-
-// STATUS CARD
-class _StatusCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-
-  const _StatusCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.white, size: 28),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// QUICK ACTION BUTTON
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: const BoxDecoration(
-            color: Colors.black,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                        'Controls use the existing local Core charger API. Your charger must be configured and support these commands.'),
+                    if (data == null)
+                      const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Text(
+                              'Connect to Core to use charging controls.')),
+                    const SizedBox(height: 20),
+                    Wrap(spacing: 12, runSpacing: 12, children: [
+                      FilledButton(
+                          onPressed: enabled
+                              ? () => request('Fast charging',
+                                  (repo) => repo.resumeFastCharging())
+                              : null,
+                          child: const Text('Charge now')),
+                      OutlinedButton(
+                          onPressed: enabled
+                              ? () => request(
+                                  'Pause', (repo) => repo.pauseCharging())
+                              : null,
+                          child: const Text('Pause charging')),
+                      OutlinedButton(
+                          onPressed: enabled
+                              ? () => request('Eco mode',
+                                  (repo) => repo.resumeEcoCharging())
+                              : null,
+                          child: const Text('Eco mode')),
+                    ]),
+                    if (busy)
+                      const Padding(
+                          padding: EdgeInsets.only(top: 16),
+                          child: LinearProgressIndicator()),
+                  ])),
+          const SizedBox(height: 24),
+          OverviewPanel(
+              title: 'Charging schedules',
+              icon: Icons.schedule,
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                        'Choose a local charging window. Existing schedules cannot yet be read back from Core on this screen.'),
+                    const SizedBox(height: 20),
+                    Wrap(spacing: 12, runSpacing: 12, children: [
+                      OutlinedButton(
+                          onPressed: enabled ? schedule : null,
+                          child: const Text('Set charging window')),
+                      TextButton(
+                          onPressed: enabled
+                              ? () => request('Stop schedule',
+                                  (repo) => repo.stopSchedule())
+                              : null,
+                          child: const Text('Stop schedule')),
+                    ]),
+                  ])),
+          const SizedBox(height: 24),
+          const FutureFeature(
+              title: 'Vehicle details & comfort',
+              icon: Icons.ac_unit,
+              description:
+                  'Vehicle documents, cabin climate, door status and driving efficiency will appear when your vehicle integration is connected.'),
+        ]));
   }
 }

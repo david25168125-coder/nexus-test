@@ -1,8 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'tesla_icons.dart';
+import 'energy_map_geometry.dart';
 
 class TeslaEnergyMap extends StatefulWidget {
+  final double nodeScale;
   final double solarKw;
   final double batteryKw;
 
@@ -33,6 +35,7 @@ class TeslaEnergyMap extends StatefulWidget {
 
   const TeslaEnergyMap({
     super.key,
+    this.nodeScale = 1,
     required this.solarKw,
     required this.batteryKw,
     required this.liveGridKw,
@@ -95,9 +98,9 @@ class _TeslaEnergyMapState extends State<TeslaEnergyMap>
     final battery = widget.batteryKw < 0 ? widget.batteryKw.abs() : 0;
     final tariff = widget.importTariffP;
 
-    double stress = (grid * tariff)
-        - (solar * (widget.exportTariffP * 0.5))
-        - (battery * 10);
+    double stress = (grid * tariff) -
+        (solar * (widget.exportTariffP * 0.5)) -
+        (battery * 10);
 
     if (stress < 0) stress = 0;
 
@@ -152,92 +155,86 @@ class _TeslaEnergyMapState extends State<TeslaEnergyMap>
         Expanded(
           child: SafeArea(
             bottom: false,
-              child: CustomPaint(
-                painter: _TeslaFlowPainter(
-                  context: context,
-                  animation: controller,
-                  landscape: landscape,
-
-                  solarKw: widget.solarKw,
-                  batteryKw: widget.batteryKw,
-                  evKw: widget.liveEvKw,
-                  gridKw: widget.liveGridKw,
-                  homeKw: widget.liveHomeKw,
-
-                  solarDisplay: _valueForNode(
-                    liveKw: widget.solarKw,
-                    dailyKwh: widget.solarDayKwh,
-                    isSolar: true,
-                    isBattery: false,
-                    isGrid: false,
-                  ),
-                  batteryDisplay: _valueForNode(
-                    liveKw: widget.batteryKw,
-                    dailyKwh: widget.batteryDayKwh,
-                    isSolar: false,
-                    isBattery: true,
-                    isGrid: false,
-                  ),
-                  evDisplay: _valueForNode(
-                    liveKw: widget.liveEvKw,
-                    dailyKwh: widget.evDayKwh,
-                    isSolar: false,
-                    isBattery: false,
-                    isGrid: false,
-                  ),
-                  gridDisplay: _valueForNode(
-                    liveKw: widget.liveGridKw,
-                    dailyKwh: widget.gridDayKwh,
-                    isSolar: false,
-                    isBattery: false,
-                    isGrid: true,
-                  ),
-                  homeDisplay: _valueForNode(
-                    liveKw: widget.liveHomeKw,
-                    dailyKwh: widget.homeDayKwh,
-                    isSolar: false,
-                    isBattery: false,
-                    isGrid: false,
-                  ),
-
-                  solarColor: Colors.grey,
-                  batteryColor: Colors.grey,
-
-                  evColor: widget.evFault
-                      ? Colors.red
-                      : !widget.evComms
-                          ? Colors.blue
-                          : widget.liveEvKw.abs() > 0.05
-                              ? Colors.green
-                              : Colors.grey,
-
-                  gridColor: _ringColor(
-                    comms: widget.gridComms,
-                    fault: widget.gridFault,
-                    active: widget.liveGridKw.abs() > 0.05,
-                    activeColor: Colors.green,
-                  ),
-
-                  homeColor: _homeRingColor(),
-
-                  solarLabel: "Solar ${widget.exportTariffP.toStringAsFixed(1)}p",
-                  gridLabel: "Grid ${widget.importTariffP.toStringAsFixed(1)}p",
+            child: CustomPaint(
+              painter: _TeslaFlowPainter(
+                nodeScale: widget.nodeScale,
+                context: context,
+                animation: controller,
+                landscape: landscape,
+                solarKw: widget.solarKw,
+                batteryKw: widget.batteryKw,
+                evKw: widget.liveEvKw,
+                gridKw: widget.liveGridKw,
+                homeKw: widget.liveHomeKw,
+                solarDisplay: _valueForNode(
+                  liveKw: widget.solarKw,
+                  dailyKwh: widget.solarDayKwh,
+                  isSolar: true,
+                  isBattery: false,
+                  isGrid: false,
                 ),
-                child: const SizedBox.expand(),
+                batteryDisplay: _valueForNode(
+                  liveKw: widget.batteryKw,
+                  dailyKwh: widget.batteryDayKwh,
+                  isSolar: false,
+                  isBattery: true,
+                  isGrid: false,
+                ),
+                evDisplay: _valueForNode(
+                  liveKw: widget.liveEvKw,
+                  dailyKwh: widget.evDayKwh,
+                  isSolar: false,
+                  isBattery: false,
+                  isGrid: false,
+                ),
+                gridDisplay: _valueForNode(
+                  liveKw: widget.liveGridKw,
+                  dailyKwh: widget.gridDayKwh,
+                  isSolar: false,
+                  isBattery: false,
+                  isGrid: true,
+                ),
+                homeDisplay: _valueForNode(
+                  liveKw: widget.liveHomeKw,
+                  dailyKwh: widget.homeDayKwh,
+                  isSolar: false,
+                  isBattery: false,
+                  isGrid: false,
+                ),
+                solarColor: Colors.grey,
+                batteryColor: Colors.grey,
+                evColor: widget.evFault
+                    ? Colors.red
+                    : !widget.evComms
+                        ? Colors.blue
+                        : widget.liveEvKw.abs() > 0.05
+                            ? Colors.green
+                            : Colors.grey,
+                gridColor: _ringColor(
+                  comms: widget.gridComms,
+                  fault: widget.gridFault,
+                  active: widget.liveGridKw.abs() > 0.05,
+                  activeColor: Colors.green,
+                ),
+                homeColor: _homeRingColor(),
+                solarLabel: "Solar ${widget.exportTariffP.toStringAsFixed(1)}p",
+                gridLabel: "Grid ${widget.importTariffP.toStringAsFixed(1)}p",
               ),
+              child: const SizedBox.expand(),
             ),
           ),
-
-        ],
-      );
-    }
+        ),
+      ],
+    );
   }
+}
 
 class _TeslaFlowPainter extends CustomPainter {
   final BuildContext context;
   final Animation<double> animation;
   final bool landscape;
 
+  final double nodeScale;
   final double solarKw;
   final double batteryKw;
   final double evKw;
@@ -260,6 +257,7 @@ class _TeslaFlowPainter extends CustomPainter {
   final String gridLabel;
 
   _TeslaFlowPainter({
+    required this.nodeScale,
     required this.context,
     required this.animation,
     required this.landscape,
@@ -282,9 +280,9 @@ class _TeslaFlowPainter extends CustomPainter {
     required this.gridLabel,
   }) : super(repaint: animation);
 
-  double get smallRadius => landscape ? 32 : 40;
-  double get homeRadius  => landscape ? 48 : 60;
-  double get labelSize   => landscape ? 13 : 16;
+  double get smallRadius => (landscape ? 32 : 40) * nodeScale;
+  double get homeRadius => (landscape ? 48 : 60) * nodeScale;
+  double get labelSize => (landscape ? 13 : 16) * nodeScale;
 
   Offset _edgePoint(Offset from, Offset to, double radius) {
     final dx = to.dx - from.dx;
@@ -298,15 +296,13 @@ class _TeslaFlowPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-
-    double verticalOffset   = size.height * (landscape ? 0.22 : 0.28);
-    double horizontalOffset = size.width  * (landscape ? 0.32 : 0.28);
-
-    final solarPos   = Offset(center.dx, center.dy - verticalOffset);
-    final batteryPos = Offset(center.dx, center.dy + verticalOffset);
-    final gridPos    = Offset(center.dx - horizontalOffset, center.dy);
-    final evPos      = Offset(center.dx + horizontalOffset, center.dy);
+    final geometry = EnergyMapGeometry(
+        size: size, landscape: landscape, nodeScale: nodeScale);
+    final center = geometry.center;
+    final solarPos = geometry.solar;
+    final batteryPos = geometry.battery;
+    final gridPos = geometry.grid;
+    final evPos = geometry.ev;
 
     if (solarKw.abs() > 0.05) {
       _drawBaseLine(canvas, solarPos, center, smallRadius, homeRadius);
@@ -322,34 +318,41 @@ class _TeslaFlowPainter extends CustomPainter {
     }
 
     _drawNode(canvas, solarPos, smallRadius, solarColor, TeslaIcons.solar,
-        solarDisplay, label: solarLabel, labelAbove: true);
+        solarDisplay,
+        label: solarLabel, labelAbove: true);
 
-    _drawNode(canvas, gridPos, smallRadius, gridColor, TeslaIcons.grid,
-        gridDisplay, label: gridLabel, labelAbove: true);
+    _drawNode(
+        canvas, gridPos, smallRadius, gridColor, TeslaIcons.grid, gridDisplay,
+        label: gridLabel, labelAbove: true);
 
     _drawNode(canvas, evPos, smallRadius, evColor, TeslaIcons.ev, evDisplay,
         label: "EV", labelAbove: true);
 
     _drawNode(canvas, batteryPos, smallRadius, batteryColor, TeslaIcons.battery,
-        batteryDisplay, label: "Battery", labelAbove: false);
+        batteryDisplay,
+        label: "Battery", labelAbove: false);
 
-    _drawNode(canvas, center, homeRadius, homeColor, TeslaIcons.home,
-        homeDisplay, label: "", labelAbove: false);
+    _drawNode(
+        canvas, center, homeRadius, homeColor, TeslaIcons.home, homeDisplay,
+        label: "", labelAbove: false);
 
     if (gridKw.abs() > 0.05) {
-      _drawFlow(canvas, gridPos, center, gridKw, gridColor, smallRadius, homeRadius);
+      _drawFlow(
+          canvas, gridPos, center, gridKw, gridColor, smallRadius, homeRadius);
     }
     if (evKw.abs() > 0.05) {
       _drawFlow(canvas, evPos, center, evKw, evColor, smallRadius, homeRadius);
     }
     if (homeKw.abs() > 0.05) {
-      _drawFlow(canvas, center, center, homeKw, homeColor, homeRadius, homeRadius);
+      _drawFlow(
+          canvas, center, center, homeKw, homeColor, homeRadius, homeRadius);
     }
   }
 
-  void _drawBaseLine(Canvas canvas, Offset from, Offset to, double r1, double r2) {
+  void _drawBaseLine(
+      Canvas canvas, Offset from, Offset to, double r1, double r2) {
     final start = _edgePoint(from, to, r1);
-    final end   = _edgePoint(to, from, r2);
+    final end = _edgePoint(to, from, r2);
 
     final paint = Paint()
       ..color = Colors.grey.shade700
@@ -379,8 +382,10 @@ class _TeslaFlowPainter extends CustomPainter {
       labelPainter.layout();
 
       final offset = labelAbove
-          ? Offset(pos.dx - labelPainter.width / 2, pos.dy - radius - 35)
-          : Offset(pos.dx - labelPainter.width / 2, pos.dy + radius + 15);
+          ? Offset(
+              pos.dx - labelPainter.width / 2, pos.dy - radius - 35 * nodeScale)
+          : Offset(pos.dx - labelPainter.width / 2,
+              pos.dy + radius + 15 * nodeScale);
 
       labelPainter.paint(canvas, offset);
     }
@@ -415,7 +420,7 @@ class _TeslaFlowPainter extends CustomPainter {
         text: String.fromCharCode(icon.codePoint),
         style: TextStyle(
           fontFamily: icon.fontFamily,
-          fontSize: landscape ? 26 : 34,
+          fontSize: (landscape ? 26 : 34) * nodeScale,
           color: Colors.white.withOpacity(0.85),
         ),
       ),
@@ -426,7 +431,8 @@ class _TeslaFlowPainter extends CustomPainter {
     final valuePainter = TextPainter(
       text: TextSpan(
         text: value.abs() < 0.01 ? "0.0" : value.abs().toStringAsFixed(2),
-        style: TextStyle(color: Colors.white, fontSize: landscape ? 12 : 14),
+        style: TextStyle(
+            color: Colors.white, fontSize: (landscape ? 12 : 14) * nodeScale),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -451,7 +457,7 @@ class _TeslaFlowPainter extends CustomPainter {
     if (from == to) return;
 
     Offset start = _edgePoint(from, to, r1);
-    Offset end   = _edgePoint(to, from, r2);
+    Offset end = _edgePoint(to, from, r2);
 
     if (kw < 0) {
       final temp = start;
@@ -474,7 +480,11 @@ class _TeslaFlowPainter extends CustomPainter {
     canvas.drawCircle(start, width * 0.8, glowPaint);
 
     final t = animation.value;
-    final pulseCount = kw.abs() < 1.0 ? 1 : kw.abs() < 3.0 ? 3 : 5;
+    final pulseCount = kw.abs() < 1.0
+        ? 1
+        : kw.abs() < 3.0
+            ? 3
+            : 5;
 
     for (int i = 0; i < pulseCount; i++) {
       final phase = (t + i / pulseCount) % 1.0;

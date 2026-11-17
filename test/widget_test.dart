@@ -10,6 +10,8 @@ import 'package:nexus_app/core/repositories/energy_repository.dart';
 import 'package:nexus_app/features/home/nexus_home.dart';
 import 'package:nexus_app/features/home/widgets/nexus_energy_map.dart';
 import 'package:nexus_app/features/home/widgets/nexus_footer.dart';
+import 'package:nexus_app/features/home/widgets/energy_map_geometry.dart';
+import 'package:nexus_app/features/home/widgets/tesla_energy_map.dart';
 import 'package:nexus_app/theme/nexus_theme.dart';
 
 class TestRepository extends NexusEnergyRepository {
@@ -95,17 +97,25 @@ void main() {
     repo.pending.complete(NexusEnergyState.fromJson({}));
     await tester.pump();
     final bounds = tester.getRect(find.byType(NexusEnergyMap));
+    final geometry = EnergyMapGeometry(
+        size: bounds.size,
+        landscape: true,
+        nodeScale: tester
+            .widget<TeslaEnergyMap>(find.byType(TeslaEnergyMap))
+            .nodeScale);
     for (final node in [
       (name: 'Home', offset: Offset.zero),
-      (name: 'Solar', offset: Offset(0, -bounds.height * 0.22)),
-      (name: 'Battery', offset: Offset(0, bounds.height * 0.22)),
-      (name: 'Grid', offset: Offset(-bounds.width * 0.32, 0)),
-      (name: 'EV charging', offset: Offset(bounds.width * 0.32, 0)),
+      (name: 'Solar', offset: Offset(0, -geometry.verticalOffset)),
+      (name: 'Battery', offset: Offset(0, geometry.verticalOffset)),
+      (name: 'Grid', offset: Offset(-geometry.horizontalOffset, 0)),
+      (name: 'EV charging', offset: Offset(geometry.horizontalOffset, 0)),
     ]) {
       await tester.tapAt(bounds.center + node.offset);
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.descendant(of: find.byType(BottomSheet),
-          matching: find.text(node.name)), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(BottomSheet), matching: find.text(node.name)),
+          findsOneWidget);
       Navigator.of(tester.element(find.text('Power now: 0.00 kW'))).pop();
       await tester.pump(const Duration(milliseconds: 400));
     }
