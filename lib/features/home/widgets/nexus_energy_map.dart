@@ -43,8 +43,10 @@ class NexusEnergyMap extends StatelessWidget {
         final centerX = w / 2;
         final centerY = h / 2;
 
-        final verticalOffset = h * 0.28;
-        final horizontalOffset = w * 0.28;
+        final landscape =
+            MediaQuery.orientationOf(context) == Orientation.landscape;
+        final verticalOffset = h * (landscape ? 0.22 : 0.28);
+        final horizontalOffset = w * (landscape ? 0.32 : 0.28);
 
         final solarPos = Offset(centerX, centerY - verticalOffset);
         final batteryPos = Offset(centerX, centerY + verticalOffset);

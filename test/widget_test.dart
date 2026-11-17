@@ -9,6 +9,7 @@ import 'package:nexus_app/core/providers/energy_provider.dart';
 import 'package:nexus_app/core/repositories/energy_repository.dart';
 import 'package:nexus_app/features/home/nexus_home.dart';
 import 'package:nexus_app/features/home/widgets/nexus_energy_map.dart';
+import 'package:nexus_app/features/home/widgets/nexus_footer.dart';
 import 'package:nexus_app/theme/nexus_theme.dart';
 
 class TestRepository extends NexusEnergyRepository {
@@ -64,6 +65,9 @@ void main() {
       }),
     );
     await tester.pump();
+    expect(find.byType(NexusFooter), findsNothing);
+    expect(find.text('Digitize Nexus'), findsNothing);
+    expect(find.byType(Image), findsOneWidget);
     await tester.tap(find.byType(NexusEnergyMap));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Power now: 0.00 kW'), findsOneWidget);
@@ -71,6 +75,40 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.scrollUntilVisible(find.text('4.2 kWh'), 200);
     expect(find.text('4.2 kWh'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('landscape energy node taps match all five visible nodes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = TestRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [energyRepositoryProvider.overrideWithValue(repo)],
+        child: MaterialApp(theme: nexusTheme, home: const NexusHome()),
+      ),
+    );
+    repo.pending.complete(NexusEnergyState.fromJson({}));
+    await tester.pump();
+    final bounds = tester.getRect(find.byType(NexusEnergyMap));
+    for (final node in [
+      (name: 'Home', offset: Offset.zero),
+      (name: 'Solar', offset: Offset(0, -bounds.height * 0.22)),
+      (name: 'Battery', offset: Offset(0, bounds.height * 0.22)),
+      (name: 'Grid', offset: Offset(-bounds.width * 0.32, 0)),
+      (name: 'EV charging', offset: Offset(bounds.width * 0.32, 0)),
+    ]) {
+      await tester.tapAt(bounds.center + node.offset);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.descendant(of: find.byType(BottomSheet),
+          matching: find.text(node.name)), findsOneWidget);
+      Navigator.of(tester.element(find.text('Power now: 0.00 kW'))).pop();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

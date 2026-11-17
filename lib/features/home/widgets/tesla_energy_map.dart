@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:nexus_app/features/home/widgets/nexus_footer.dart';
 import 'tesla_icons.dart';
 
 class TeslaEnergyMap extends StatefulWidget {
@@ -229,7 +228,6 @@ class _TeslaEnergyMapState extends State<TeslaEnergyMap>
             ),
           ),
 
-          const NexusFooter(),
         ],
       );
     }

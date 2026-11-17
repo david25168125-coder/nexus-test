@@ -7,7 +7,7 @@ This repository contains the first dashboard UI iteration, preserving the suppli
 ## Verification
 
 - Web build passes.
-- Both dashboard widget tests pass, covering offline navigation, narrow-screen layout and the energy reading panel.
+- Eight widget tests pass, covering responsive logo placement, navigation, offline behaviour, narrow-screen layout and all five energy-node reading panels.
 - Scoped dashboard analysis has no errors; warning and style/deprecation notices remain.
 - Full-project analysis still reports errors in older files outside this dashboard iteration. See [review notes](REVIEW.md) and [analysis output](docs/full-project-analysis.txt).
 - Physical devices, Home Assistant and NSPanel Pro have not been verified. Some existing security logic simulates alarm state.
@@ -28,6 +28,12 @@ These screenshots use **simulated energy readings**, not real home telemetry.
 
 ![Desktop dashboard](docs/dashboard-desktop.png)
 
-[Phone-sized preview](docs/dashboard-mobile.png)
+[Phone-sized preview](docs/dashboard-mobile.png) · [Tablet preview](docs/dashboard-tablet.png) · [NSPanel-sized preview](docs/dashboard-nspanel.png)
 
 This is development source, not a commercial release. See [REVIEW.md](REVIEW.md) for scope and limitations.
+
+## Dashboard branding
+
+The header shows the supplied Nexus symbol once. Spacious desktop layouts can centre it; Android/iOS and compact layouts keep it left-aligned to avoid the top-centre camera area. Desktop-hosted kiosks can set `NexusHeader(centerBrand: false)`. Existing page titles and controls remain available.
+
+The animated energy map contains only the energy systems. The large House node stays at its centre. Browser previews use simulated data and screen sizes; they do not verify physical NSPanel Pro hardware.

@@ -17,7 +17,7 @@ Changes:
 
 Verification:
 - Flutter dependencies resolved; the lockfile reflects the installed SDK's pinned dependencies.
-- Both widget tests pass.
+- Eight widget tests pass, including responsive branding, existing navigation and all five energy-node reading sheets.
 - The active application builds successfully for web.
 - Scoped static analysis of home UI, theme, energy provider and tests has no errors. Existing warnings and SDK deprecation/style notices remain.
 - Full-project static analysis reports pre-existing errors: obsolete NexusData constructor arguments in nexus_repository.dart; incorrect security overview import in navigation.dart; absent base_repository.dart used by SecurityRepository; missing TapAnimation arguments in tap_test_page.dart. These were outside this dashboard iteration and have not been silently replaced.
@@ -38,3 +38,12 @@ Run from Nexus_App using a compatible Flutter SDK:
 Browser builds require the backend to allow the app's origin. Use the existing native platforms for target-device verification.
 
 Browser screenshots use simulated readings, not telemetry from a real property. Browser checks block HTTPS requests to verify that the local renderer/font setup works without public CDNs.
+
+## Branding feedback update
+
+- Replaced default NEXUS header text with the supplied logo asset and an accessible Nexus label.
+- Left-aligned the logo for Android/iOS and compact viewports; spacious desktops can centre it. Added an explicit alignment override for kiosks.
+- Removed the Digitize Nexus footer from the animated energy display; the existing footer component remains available elsewhere.
+- Preserved the large central House node, telemetry and animation behaviour.
+- Matched landscape tap targets to the painter's existing node positions.
+- Web build and eight widget tests pass. Scoped static analysis reports no errors, with pre-existing warning/deprecation/style notices retained.
